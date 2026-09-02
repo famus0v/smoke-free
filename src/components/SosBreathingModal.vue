@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { X, CheckCircle2 } from 'lucide-vue-next'
-import { impact } from '../telegram'
+import { impact } from '../haptics'
 const emit = defineEmits<{ close: [completed: boolean] }>()
 const remaining = ref(180), phase = ref(0)
 const phases = [{ name: 'Вдох', seconds: 4 }, { name: 'Задержка', seconds: 7 }, { name: 'Выдох', seconds: 8 }]

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { AlertTriangle, Wind, CigaretteOff, Trophy, BriefcaseBusiness, Coffee, Heart, Flame, BadgeDollarSign, TrendingUp, CalendarDays, ReceiptText } from 'lucide-vue-next'
+import { AlertTriangle, Wind, CigaretteOff, Trophy, BriefcaseBusiness, Coffee, Heart, Flame, Share2, BadgeDollarSign, TrendingUp, CalendarDays, ReceiptText } from 'lucide-vue-next'
 import AppHeader from './components/AppHeader.vue'
 import TimeCounter from './components/TimeCounter.vue'
 import MetricCard from './components/MetricCard.vue'
@@ -9,12 +9,13 @@ import SosBreathingModal from './components/SosBreathingModal.vue'
 import CravingSheet from './components/CravingSheet.vue'
 import HealthMilestoneItem from './components/HealthMilestoneItem.vue'
 import CravingHeatmap from './components/CravingHeatmap.vue'
+import ShareCardSheet from './components/ShareCardSheet.vue'
 import { useTrackerStore } from './stores/tracker'
-import { impact, notify } from './telegram'
+import { impact, notify } from './haptics'
 import type { CravingContext, UserProfile } from './types'
 
 const store = useTrackerStore()
-const tab = ref('home'), sosOpen = ref(false), cravingOpen = ref(false), slipOpen = ref(false), settingsOpen = ref(false)
+const tab = ref('home'), sosOpen = ref(false), cravingOpen = ref(false), slipOpen = ref(false), shareOpen = ref(false), settingsOpen = ref(false)
 const dateLocal = ref(new Date().toISOString().slice(0, 16)), cigarettes = ref(15), packPrice = ref(220), packCount = ref(20)
 const slipCount = ref(1), slipReason = ref(''), historyFilter = ref<'all' | 'craving' | 'slip'>('all')
 const profile = computed(() => store.profile)
@@ -59,7 +60,7 @@ const filteredHistory = computed(() => historyFilter.value === 'all' ? historyEv
       <section class="home-hero"><span class="home-hero-icon"><CigaretteOff :size="25"/></span><TimeCounter :elapsed="store.elapsedMs"/></section>
       <div class="metrics home-grid"><MetricCard :value="formatMoney(store.moneySaved)" label="сэкономлено" tone="green" :icon="BadgeDollarSign"/><MetricCard :value="Math.floor(store.cigarettesNotSmoked).toLocaleString('ru-RU')" label="не выкурено" tone="blue" :icon="CigaretteOff"/><MetricCard :value="`${store.smokeFreeRatio}%`" label="чистых дней" tone="purple" :icon="Trophy"/></div>
       <button class="sos-button" @click="sosOpen = true; impact('medium')"><span><b>Тянет курить?</b><small>Побудь с собой 3 минуты</small></span><Wind :size="29"/></button>
-      <div class="action-row"><button class="quick-action" @click="cravingOpen = true; impact()"><Flame :size="19"/>Записать тягу</button><button class="quick-action muted-action" @click="slipOpen = true; impact('light')"><AlertTriangle :size="18"/>Я оступился</button></div>
+      <div class="action-row"><button class="quick-action" @click="cravingOpen = true; impact()"><Flame :size="19"/>Записать тягу</button><button class="quick-action muted-action" @click="slipOpen = true; impact('light')"><AlertTriangle :size="18"/>Я оступился</button></div><button class="share-card-button" @click="shareOpen = true; impact('medium')"><Share2 :size="19"/><span><b>Поделиться достижением</b><small>Создать карточку для сторис</small></span></button>
     </section>
     <section v-else-if="tab === 'health'" class="page"><p class="page-intro">Тело восстанавливается поэтапно. Прогресс основан на сроке без сигарет; результаты индивидуальны.</p><div class="group-list health-list"><HealthMilestoneItem v-for="m in milestones" :key="m.title" :title="m.title" :description="m.description" :progress="milestoneProgress(m.time)" :complete="milestoneProgress(m.time) >= 100"/></div><p class="health-source">Сроки: CDC и NHS. Это справочная информация, не медицинская консультация.</p></section>
     <section v-else-if="tab === 'finance'" class="page finance-page"><section class="finance-hero"><span class="finance-hero-icon"><BadgeDollarSign :size="25"/></span><p>УЖЕ СОХРАНЕНО</p><b>{{ formatMoney(store.moneySaved) }}</b><small>Деньги остаются у тебя — один день за другим.</small></section><div class="finance-grid"><article><TrendingUp :size="20"/><span>В день</span><b>{{ formatMoney(dailySaving) }}</b></article><article><CalendarDays :size="20"/><span>За 30 дней</span><b>{{ formatMoney(monthlySaving) }}</b></article><article><ReceiptText :size="20"/><span>Не выкурено</span><b>{{ Math.floor(store.cigarettesNotSmoked).toLocaleString('ru-RU') }}</b></article></div><section class="finance-note"><b>Твоя новая привычка уже окупается</b><p>Продолжай отмечать тяги: это помогает видеть, как часто ты выбираешь себя вместо сигареты.</p></section></section>
@@ -67,6 +68,6 @@ const filteredHistory = computed(() => historyFilter.value === 'all' ? historyEv
     <BottomNavigation :active="tab" @change="(next) => { tab = next; impact() }"/>
   </main>
   <SosBreathingModal v-if="sosOpen" @close="(completed) => { sosOpen = false; if (completed) notify('success') }"/><Transition name="sheet-slide"><CravingSheet v-if="cravingOpen" @close="cravingOpen = false" @save="saveCraving"/></Transition>
-  <Transition name="sheet-slide"><div v-if="slipOpen" class="sheet-backdrop" @click.self="slipOpen = false"><section class="sheet slip-sheet"><div class="sheet-handle"/><div class="sheet-title"><h2>Ты не начал с нуля</h2><button @click="slipOpen = false">×</button></div><p class="muted">Один эпизод не отменяет твой путь. Отметь его, чтобы лучше понимать триггеры.</p><label>Сколько сигарет?</label><input v-model.number="slipCount" class="text-input" type="number" min="1" inputmode="numeric"/><label>Что спровоцировало?</label><input v-model="slipReason" class="text-input" placeholder="Например, стресс или компания"/><button class="primary" @click="logSlip">Записать бережно</button></section></div></Transition>
+  <Transition name="sheet-slide"><ShareCardSheet v-if="shareOpen" :days="store.elapsedDays" :saved="store.moneySaved" :currency="currency" @close="shareOpen = false"/></Transition>`n  <Transition name="sheet-slide"><div v-if="slipOpen" class="sheet-backdrop" @click.self="slipOpen = false"><section class="sheet slip-sheet"><div class="sheet-handle"/><div class="sheet-title"><h2>Ты не начал с нуля</h2><button @click="slipOpen = false">×</button></div><p class="muted">Один эпизод не отменяет твой путь. Отметь его, чтобы лучше понимать триггеры.</p><label>Сколько сигарет?</label><input v-model.number="slipCount" class="text-input" type="number" min="1" inputmode="numeric"/><label>Что спровоцировало?</label><input v-model="slipReason" class="text-input" placeholder="Например, стресс или компания"/><button class="primary" @click="logSlip">Записать бережно</button></section></div></Transition>
   <div v-if="settingsOpen" class="modal-backdrop"><section class="dialog"><h2>Настройки</h2><p class="muted">Удаление сотрёт профиль, историю и финансы с устройства.</p><button class="danger-button" @click="store.resetAllData(); settingsOpen = false; notify('warning')">Сбросить все данные</button><button class="text-button" @click="settingsOpen = false">Закрыть</button></section></div>
 </template>
