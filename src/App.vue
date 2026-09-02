@@ -11,7 +11,7 @@ import HealthMilestoneItem from './components/HealthMilestoneItem.vue'
 import CravingHeatmap from './components/CravingHeatmap.vue'
 import ShareCardSheet from './components/ShareCardSheet.vue'
 import { useTrackerStore } from './stores/tracker'
-import { impact, notify } from './haptics'
+import { impact, notify } from './telegram'
 import type { CravingContext, UserProfile } from './types'
 
 const store = useTrackerStore()
