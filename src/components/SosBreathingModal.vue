@@ -18,6 +18,6 @@ const timer = window.setInterval(() => {
 onMounted(() => impact('light'))
 onBeforeUnmount(() => clearInterval(timer))
 const clock = computed(() => `${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`)
-const phaseText = computed(() => `${phases[phase.value].name} ${phases[phase.value].seconds}с`)
+const phaseText = computed(() => `${phases[phase.value].name} ${phaseRemaining.value}с`)
 </script>
 <template><div class="modal-backdrop"><section class="sos-modal"><button class="close" @click="emit('close', false)"><X/></button><p class="section-label">ПЕРЕТЕРПИ ВСЕГО</p><h2>{{ clock }}</h2><p class="muted">Тяга пройдёт. Дыши вместе с кругом.</p><div class="breathing-wrap"><div class="breathing-circle" :class="`phase-${phase}`"><span>{{ phaseText }}</span></div></div><p class="quote">«Ты не лишаешь себя сигареты — ты выбираешь свободу.»</p><button class="primary success" @click="emit('close', true)"><CheckCircle2 :size="20"/> Попустило, закрыть</button></section></div></template>
