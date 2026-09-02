@@ -5,8 +5,16 @@ import { impact } from '../telegram'
 const emit = defineEmits<{ close: [completed: boolean] }>()
 const remaining = ref(180), phase = ref(0)
 const phases = [{ name: 'Вдох', seconds: 4 }, { name: 'Задержка', seconds: 7 }, { name: 'Выдох', seconds: 8 }]
-let phaseSeconds = 0
-const timer = window.setInterval(() => { remaining.value = Math.max(0, remaining.value - 1); phaseSeconds++; if (phaseSeconds >= phases[phase.value].seconds) { phase.value = (phase.value + 1) % phases.length; phaseSeconds = 0; impact('light') } }, 1000)
+const phaseRemaining = ref(phases[0].seconds)
+const timer = window.setInterval(() => {
+  remaining.value = Math.max(0, remaining.value - 1)
+  phaseRemaining.value--
+  if (phaseRemaining.value <= 0) {
+    phase.value = (phase.value + 1) % phases.length
+    phaseRemaining.value = phases[phase.value].seconds
+    impact('light')
+  }
+}, 1000)
 onMounted(() => impact('light'))
 onBeforeUnmount(() => clearInterval(timer))
 const clock = computed(() => `${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`)
