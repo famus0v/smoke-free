@@ -1,7 +1,7 @@
-import React from 'react'
-import { ImageResponse } from '@vercel/og'
-const value = (url: URL, key: string, limit: number) => Math.max(0, Math.min(limit, Number(url.searchParams.get(key)) || 0))
-export default function handler(request: Request) {
+const React = require('react')
+const { ImageResponse } = require('@vercel/og')
+const value = (url, key, limit) => Math.max(0, Math.min(limit, Number(url.searchParams.get(key)) || 0))
+module.exports = function handler(request) {
   const url = new URL(request.url)
   const days = value(url, 'days', 99999)
   const saved = value(url, 'saved', 99_999_999).toLocaleString('ru-RU')
