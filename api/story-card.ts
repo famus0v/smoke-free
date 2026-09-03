@@ -1,0 +1,11 @@
+const escapeXml = (value: string) => value.replace(/[<>&"']/g, char => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[char] || char))
+export default function handler(req: { query?: Record<string, string | string[] | undefined> }, res: { setHeader: (name: string, value: string) => void; status: (code: number) => { send: (body: string) => void } }) {
+  const raw = (key: string) => Array.isArray(req.query?.[key]) ? req.query?.[key]?.[0] : req.query?.[key]
+  const days = Math.max(0, Math.min(99999, Number(raw('days')) || 0))
+  const saved = Math.max(0, Math.min(99_999_999, Number(raw('saved')) || 0)).toLocaleString('ru-RU')
+  const currency = escapeXml((raw('currency') || '₽').slice(0, 4))
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#087fdc"/><stop offset="1" stop-color="#5ab1f4"/></linearGradient></defs><rect width="1080" height="1920" fill="url(#g)"/><circle cx="1030" cy="1710" r="300" fill="#fff" opacity=".12"/><circle cx="900" cy="280" r="130" fill="#fff" opacity=".14"/><text x="84" y="145" fill="#fff" font-family="Arial, sans-serif" font-size="46" font-weight="700">SMOKE FREE</text><text x="84" y="330" fill="#fff" opacity=".75" font-family="Arial, sans-serif" font-size="34">МОЙ ПУТЬ БЕЗ ДЫМА</text><text x="78" y="585" fill="#fff" font-family="Arial, sans-serif" font-size="215" font-weight="800">${days}</text><text x="84" y="675" fill="#fff" font-family="Arial, sans-serif" font-size="62" font-weight="600">дней чистоты</text><rect x="72" y="850" width="936" height="270" rx="42" fill="#fff" opacity=".18"/><text x="120" y="940" fill="#fff" opacity=".75" font-family="Arial, sans-serif" font-size="34" font-weight="600">СОХРАНЕНО</text><text x="120" y="1050" fill="#fff" font-family="Arial, sans-serif" font-size="88" font-weight="800">${saved} ${currency}</text><text x="84" y="1580" fill="#fff" opacity=".85" font-family="Arial, sans-serif" font-size="42">Сегодня я выбираю себя.</text><text x="84" y="1710" fill="#fff" opacity=".8" font-family="Arial, sans-serif" font-size="34">smokefree</text></svg>`
+  res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8')
+  res.setHeader('Cache-Control', 'public, max-age=300')
+  res.status(200).send(svg)
+}
