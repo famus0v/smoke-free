@@ -1,23 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref } from 'vue'
 import TgHeader from '@/components/common/TgHeader.vue'
-import BottomNavigation from '@/components/BottomNavigation.vue'
-import { impact } from '@/telegram'
+import ModuleSelectorSheet from '@/components/common/ModuleSelectorSheet.vue'
 
-const route = useRoute()
-const router = useRouter()
-const activeTab = computed(() => route.path === '/' ? 'home' : route.path === '/settings' ? 'settings' : 'modules')
-const changeTab = (tab: string) => {
-  impact('light')
-  router.push(tab === 'home' ? '/' : tab === 'settings' ? '/settings' : '/modules')
-}
+const selectorOpen = ref(false)
 </script>
 
 <template>
-  <main class="app-shell life-shell">
-    <TgHeader @open-selector="changeTab('modules')" />
-    <RouterView />
-    <BottomNavigation :active="activeTab" @change="changeTab" />
-  </main>
+  <div class="app-shell">
+    <TgHeader @open-selector="selectorOpen = true" />
+    <main class="page-wrap"><RouterView /></main>
+    <ModuleSelectorSheet v-model="selectorOpen" />
+  </div>
 </template>
