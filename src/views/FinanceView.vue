@@ -43,6 +43,31 @@ const nextDays = computed(() => [1, 2, 3].map((offset) => {
   const limit = Math.max(0, (store.state.finance.monthlyBudget - store.monthExpenses - smartDraft.value.amount) / daysAfterTarget)
   return { label: offset === 1 ? 'Завтра' : date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' }), limit }
 }))
+const historyGroups = computed(() => {
+  type Expense = (typeof store.state.finance.expenses)[number]
+  const groups = new Map<string, { date: string; expenses: Expense[]; total: number }>()
+  store.state.finance.expenses.forEach((expense) => {
+    const date = expense.date.slice(0, 10)
+    const group = groups.get(date) ?? { date, expenses: [], total: 0 }
+    group.expenses.push(expense)
+    group.total += expense.amount
+    groups.set(date, group)
+  })
+  return [...groups.values()].sort((a, b) => b.date.localeCompare(a.date))
+})
+const historyDate = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' }).toUpperCase()
+const categoryInfo = (id: ExpenseCategory) => categories.find((item) => item.id === id) ?? categories[0]
+const swipeOffsets = ref<Record<string, number>>({})
+let swipeStartX = 0
+let swipingId = ''
+const beginSwipe = (event: TouchEvent, id: string) => { swipeStartX = event.touches[0]?.clientX ?? 0; swipingId = id }
+const moveSwipe = (event: TouchEvent, id: string) => {
+  if (swipingId !== id) return
+  const delta = (event.touches[0]?.clientX ?? swipeStartX) - swipeStartX
+  swipeOffsets.value[id] = Math.max(-88, Math.min(0, delta))
+}
+const endSwipe = (id: string) => { swipeOffsets.value[id] = (swipeOffsets.value[id] ?? 0) < -42 ? -76 : 0; swipingId = '' }
+const deleteExpense = (id: string) => { store.removeExpense(id); delete swipeOffsets.value[id]; haptic('medium') }
 const activeSubscriptions = computed(() => store.state.finance.subscriptions.filter((subscription) => subscription.active))
 const monthlyBurn = computed(() => activeSubscriptions.value.reduce((sum, subscription) => sum + subscription.amount, 0))
 const dailyBurn = computed(() => monthlyBurn.value / 30)
@@ -108,7 +133,22 @@ const addSubscription = () => { if (!store.addSubscription(subscriptionTitle.val
       </div>
     </div>
 
-    <div v-else-if="section === 'history'" class="module-content"><div class="card"><div v-if="!store.state.finance.expenses.length" class="empty"><ReceiptText :size="28" /><span>Расходов пока нет</span></div><div v-for="expense in store.state.finance.expenses" :key="expense.id" class="row transaction"><span><b>{{ categories.find((item) => item.id === expense.category)?.label }}</b><small>{{ new Date(expense.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) }}<template v-if="expense.note"> · {{ expense.note }}</template></small></span><b>−{{ money(expense.amount) }} {{ store.state.finance.currency }}</b></div></div></div>
+    <div v-else-if="section === 'history'" class="module-content history-page">
+      <div v-if="!historyGroups.length" class="card empty"><ReceiptText :size="28" /><span>Расходов пока нет</span></div>
+      <section v-for="group in historyGroups" :key="group.date" class="history-group">
+        <div class="history-date"><span><i :class="{ danger: group.total > store.todayLimit }" />{{ historyDate(group.date) }}</span><b>−{{ money(group.total) }} {{ store.state.finance.currency }}</b></div>
+        <div class="card history-list">
+          <div v-for="expense in group.expenses" :key="expense.id" class="swipe-shell">
+            <button class="swipe-delete" aria-label="Удалить расход" @click="deleteExpense(expense.id)"><Trash2 :size="18" /><span>Удалить</span></button>
+            <article class="row transaction swipe-row" :style="{ transform: `translateX(${swipeOffsets[expense.id] ?? 0}px)` }" @touchstart="beginSwipe($event, expense.id)" @touchmove.prevent="moveSwipe($event, expense.id)" @touchend="endSwipe(expense.id)">
+              <span class="category-icon" :style="{ background: `${categoryInfo(expense.category).color}22`, color: categoryInfo(expense.category).color }"><component :is="categoryInfo(expense.category).icon" :size="17" /></span>
+              <span class="transaction-copy"><b>{{ categoryInfo(expense.category).label }}</b><small>{{ expense.note || 'Без комментария' }}</small></span>
+              <b>−{{ money(expense.amount) }} {{ store.state.finance.currency }}</b>
+            </article>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <div v-else-if="section === 'debts'" class="module-content"><section class="debt-hero"><Landmark :size="23" /><div><span>К возврату</span><b>{{ money(store.state.finance.debts.reduce((sum, debt) => sum + debt.amount, 0)) }} {{ store.state.finance.currency }}</b></div></section><div class="card compact-form"><input v-model="debtTitle" class="app-input" placeholder="Кому или за что" /><label class="amount-field"><input v-model.number="debtAmount" class="app-input" type="number" inputmode="decimal" placeholder="Сумма" /><span>{{ store.state.finance.currency }}</span></label><input v-model="debtDueDate" class="app-input" type="date" /><button class="primary-btn add" @click="addDebt"><Plus :size="18" /> Добавить долг</button></div><h2 class="section-title">Активные долги</h2><div class="card"><div v-if="!store.state.finance.debts.length" class="empty"><Landmark :size="28" /><span>Долгов нет</span></div><div v-for="debt in store.state.finance.debts" :key="debt.id" class="row debt-row"><span><b>{{ debt.title }}</b><small>{{ debt.dueDate ? `Вернуть до ${new Date(debt.dueDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}` : 'Срок не указан' }}</small></span><b>{{ money(debt.amount) }} {{ store.state.finance.currency }}</b><button aria-label="Удалить долг" @click="store.removeDebt(debt.id); haptic('light')"><Trash2 :size="17" /></button></div></div></div>
 
@@ -121,4 +161,7 @@ const addSubscription = () => { if (!store.addSubscription(subscriptionTitle.val
 </style>
 <style scoped>
 .budget-hero{min-height:201px}.budget-hero.risk-warning{background:linear-gradient(135deg,#e98108,#ffb340);box-shadow:0 4px 10px rgba(255,149,0,.2)}.budget-hero.risk-overdraft{background:linear-gradient(135deg,#7b1d31,#c6364e);box-shadow:0 4px 10px rgba(160,31,57,.24)}.budget-hero .hero-progress{height:7px;margin:18px 0 8px;background:rgba(255,255,255,.24)}.budget-hero .hero-progress i{background:#fff}.projection-copy{margin:7px 0 -2px;color:var(--secondary);font-size:12px;line-height:1.35}.smart-display{display:flex;align-items:center;gap:7px;padding:0 10px;border-radius:12px;background:var(--pressed)}.smart-entry{min-width:0;flex:1;border:0!important;box-shadow:none!important;background:transparent!important;font-size:20px;font-weight:750}.smart-display button{display:grid;place-items:center;width:32px;height:32px;color:var(--secondary);background:transparent}.smart-hint{min-height:18px;margin:8px 2px 0;color:var(--secondary);font-size:12px}.quick-add{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}.quick-add button{min-height:35px;border-radius:10px;color:var(--accent);background:rgba(10,132,255,.1);font-size:13px;font-weight:750}.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}.numpad button{height:42px;border-radius:11px;color:var(--text);background:var(--pressed);font-size:18px;font-weight:650}.numpad button:active,.quick-add button:active{transform:scale(.96);background:var(--separator)}
+</style>
+<style scoped>
+.history-page{display:grid;gap:18px}.history-group{display:grid;gap:7px}.history-date{display:flex;align-items:center;justify-content:space-between;padding:0 4px;color:var(--secondary);font-size:11px;font-weight:750;letter-spacing:.55px}.history-date span{display:flex;align-items:center;gap:7px}.history-date i{width:7px;height:7px;border-radius:50%;background:var(--green)}.history-date i.danger{background:#ff453a}.history-date b{color:var(--secondary);font-size:12px;letter-spacing:0}.history-list{overflow:hidden}.swipe-shell{position:relative;overflow:hidden}.swipe-shell+.swipe-shell{border-top:.5px solid var(--separator)}.swipe-delete{position:absolute;inset:0 0 0 auto;width:76px;color:#fff;background:#ff453a;display:grid;place-items:center;align-content:center;gap:2px;font-size:10px}.swipe-row{position:relative;z-index:1;min-height:64px;background:var(--card);transition:transform .18s ease;touch-action:pan-y}.transaction{gap:10px}.transaction .category-icon{width:32px;height:32px;flex:none;border-radius:8px;display:grid;place-items:center}.transaction-copy{display:grid;gap:3px;flex:1}.transaction-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.transaction> b{font-size:13px;white-space:nowrap}
 </style>

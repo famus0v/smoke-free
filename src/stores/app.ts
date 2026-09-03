@@ -68,6 +68,7 @@ export const useAppStore = defineStore('app', () => {
   const addCraving = (intensity: 1 | 2 | 3 | 4 | 5, trigger: string) => state.value.smoking.cravings.unshift({ id: uid(), timestamp: isoNow(), intensity, trigger })
   const addSlip = (count: number, reason: string) => state.value.smoking.slips.unshift({ id: uid(), timestamp: isoNow(), count, reason })
   const addExpense = (amount: number, category: ExpenseCategory, note?: string) => { ensureTodayLimit(); state.value.finance.expenses.unshift({ id: uid(), date: isoNow(), amount, category, note }) }
+  const removeExpense = (id: string) => { state.value.finance.expenses = state.value.finance.expenses.filter((expense) => expense.id !== id) }
   const toggleDashboardWidget = (widget: DashboardWidgetId) => {
     const widgets = state.value.dashboardWidgets
     if (widgets.includes(widget)) { if (widgets.length > 1) state.value.dashboardWidgets = widgets.filter((item) => item !== widget); return }
@@ -101,5 +102,5 @@ export const useAppStore = defineStore('app', () => {
     ensureTodayLimit()
   }
 
-  return { state, cleanDays, savedMoney, monthExpenses, safeToSpend, todayLimit, futureDailyLimit, setActiveModule, addCraving, addSlip, addExpense, toggleDashboardWidget, addDebt, removeDebt, addSubscription, removeSubscription, addTask, reset, importState }
+  return { state, cleanDays, savedMoney, monthExpenses, safeToSpend, todayLimit, futureDailyLimit, setActiveModule, addCraving, addSlip, addExpense, removeExpense, toggleDashboardWidget, addDebt, removeDebt, addSubscription, removeSubscription, addTask, reset, importState }
 })
