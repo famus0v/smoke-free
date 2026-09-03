@@ -1,8 +1,11 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
-import './style.css'
-import { setupTelegram } from './telegram'
+import router from './router'
+import './styles.css'
+import { tg } from './lib/telegram'
 
-setupTelegram()
-createApp(App).use(createPinia()).mount('#app')
+tg?.ready()
+tg?.expand()
+
+createApp(App).use(createPinia()).use(router).mount('#app')

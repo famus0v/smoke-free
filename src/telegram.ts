@@ -1,7 +1,5 @@
 type HapticType = 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'
 type NotificationType = 'success' | 'error' | 'warning'
-type TelegramHaptics = { impactOccurred: (type: HapticType) => void; notificationOccurred: (type: NotificationType) => void }
-declare global { interface Window { Telegram?: { WebApp?: { ready?: () => void; expand?: () => void; colorScheme?: 'light' | 'dark'; shareToStory?: (mediaUrl: string, params?: { text?: string }) => void; HapticFeedback?: TelegramHaptics } } } }
 const app = () => window.Telegram?.WebApp
 const vibrate = (pattern: number | number[]) => { try { if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(pattern) } catch { /* unsupported browser */ } }
 export function setupTelegram() { const webApp = app(); if (!webApp) return; document.documentElement.dataset.platform = 'telegram'; document.documentElement.dataset.theme = webApp.colorScheme || ''; webApp.ready?.(); webApp.expand?.() }
