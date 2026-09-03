@@ -9,12 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@vercel/og": "^1.0.2",
     "@vueuse/core": "^12.8.2",
     "lucide-vue-next": "^0.468.0",
     "pinia": "^2.2.6",
     "react": "^19.2.8",
-    "sharp": "^0.35.4",
     "vue": "^3.5.13"
   },
   "devDependencies": {
