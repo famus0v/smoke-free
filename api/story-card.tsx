@@ -1,6 +1,5 @@
 import React from 'react'
 import { ImageResponse } from '@vercel/og'
-export const config = { runtime: 'edge' }
 const value = (url: URL, key: string, limit: number) => Math.max(0, Math.min(limit, Number(url.searchParams.get(key)) || 0))
 export default function handler(request: Request) {
   const url = new URL(request.url)
