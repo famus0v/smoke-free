@@ -1,33 +1,26 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Download, Upload, Trash2, Database, ChevronRight } from 'lucide-vue-next'
+import { Database, Download, Upload, Trash2, ChevronRight, ShieldCheck } from 'lucide-vue-next'
+import AppHeader from '@/components/AppHeader.vue'
 import { useAppStore } from '@/stores/app'
-import { haptic, notify } from '@/lib/telegram'
+import { useTrackerStore } from '@/stores/tracker'
+import { impact, notify } from '@/telegram'
+import type { TrackerData } from '@/types'
 
-const store=useAppStore();const file=ref<HTMLInputElement>()
-const exportData=()=>{const blob=new Blob([JSON.stringify(store.state,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`life-os-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);notify('success')}
-const importData=async(event:Event)=>{const target=event.target as HTMLInputElement;const selected=target.files?.[0];if(!selected)return;try{store.importState(JSON.parse(await selected.text()));notify('success')}catch{notify('error')}finally{target.value=''}}
-const reset=()=>{if(window.confirm('Удалить все локальные данные Life OS?')){store.reset();notify('warning')}}
+const app=useAppStore(),tracker=useTrackerStore(),file=ref<HTMLInputElement>(),resetSheet=ref(false)
+const exportData=()=>{const payload={version:2,app:app.state,tracker:tracker.data};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`life-os-${new Date().toISOString().slice(0,10)}.json`;link.click();URL.revokeObjectURL(url);notify('success')}
+const importData=async(event:Event)=>{const input=event.target as HTMLInputElement;const selected=input.files?.[0];if(!selected)return;try{const value=JSON.parse(await selected.text()) as {app?:unknown;tracker?:TrackerData};if(!value.app&&!value.tracker)throw new Error();if(value.app)app.importState(value.app);if(value.tracker)tracker.data=value.tracker;notify('success')}catch{notify('error')}finally{input.value=''}}
+const resetAll=()=>{app.reset();tracker.resetAllData();resetSheet.value=false;notify('warning')}
 </script>
-
 <template>
-  <section class="screen">
-    <p class="eyebrow">Life OS</p><h1 class="screen-title">Настройки</h1><p class="screen-subtitle">Все данные живут только на этом устройстве.</p>
-    <div class="privacy card inset"><span><Database :size="24" /></span><div><b>Полностью offline-first</b><p>Никаких аккаунтов, серверов и передачи личных данных.</p></div></div>
-    <h2 class="section-title">Резервная копия</h2>
-    <div class="card">
-      <button class="settings-row" @click="exportData"><span class="icon blue"><Download :size="19" /></span><span><b>Экспортировать данные</b><small>Скачать JSON-файл</small></span><ChevronRight :size="18" /></button>
-      <button class="settings-row" @click="file?.click();haptic('light')"><span class="icon green"><Upload :size="19" /></span><span><b>Импортировать данные</b><small>Восстановить из JSON</small></span><ChevronRight :size="18" /></button>
-      <input ref="file" hidden type="file" accept="application/json,.json" @change="importData" />
-    </div>
-    <h2 class="section-title">Бюджет</h2>
-    <div class="card row budget"><span>Месячный лимит</span><label><input v-model.number="store.state.finance.monthlyBudget" type="number" inputmode="decimal" /> {{ store.state.finance.currency }}</label></div>
-    <h2 class="section-title">Опасная зона</h2>
-    <button class="reset-row card" @click="reset"><span class="icon red"><Trash2 :size="19" /></span><span><b>Сбросить все данные</b><small>Это действие нельзя отменить</small></span></button>
-    <p class="version">Life OS · версия {{ store.state.version }}</p>
+  <section class="life-page">
+    <AppHeader title="Настройки" @settings="impact()"/>
+    <section class="settings-hero"><span><ShieldCheck :size="25"/></span><div><b>Данные остаются у тебя</b><p>Life OS работает без аккаунта и хранит всё только на этом устройстве.</p></div></section>
+    <p class="section-heading">РЕЗЕРВНАЯ КОПИЯ</p>
+    <div class="group-list settings-list"><button class="list-action" @click="exportData"><span class="list-icon blue"><Download :size="19"/></span><span><b>Экспортировать данные</b><small>Скачать единый JSON-файл</small></span><ChevronRight :size="18"/></button><button class="list-action" @click="file?.click();impact()"><span class="list-icon green"><Upload :size="19"/></span><span><b>Импортировать данные</b><small>Восстановить резервную копию</small></span><ChevronRight :size="18"/></button><input ref="file" hidden type="file" accept="application/json,.json" @change="importData"/></div>
+    <p class="section-heading">БЮДЖЕТ</p><label class="setting-input group-list"><span><b>Месячный лимит</b><small>Для расчёта Safe-to-Spend</small></span><div><input v-model.number="app.state.finance.monthlyBudget" type="number"/> {{ app.state.finance.currency }}</div></label>
+    <p class="section-heading">ДАННЫЕ</p><button class="danger-list-button" @click="resetSheet=true;impact('medium')"><span class="list-icon red"><Trash2 :size="19"/></span><span><b>Сбросить всё</b><small>Удалить профиль и историю с устройства</small></span></button>
+    <p class="app-version">Life OS · версия {{ app.state.version }}</p>
   </section>
+  <Transition name="sheet-slide"><div v-if="resetSheet" class="sheet-backdrop" @click.self="resetSheet=false"><section class="sheet confirm-sheet"><div class="sheet-handle"/><div class="sheet-title"><h2>Удалить все данные?</h2><button @click="resetSheet=false">×</button></div><p class="muted">Профиль, прогресс, тренировки, расходы и задачи будут удалены с устройства.</p><button class="danger-button" @click="resetAll">Удалить безвозвратно</button><button class="text-button" @click="resetSheet=false">Отмена</button></section></div></Transition>
 </template>
-
-<style scoped>
-.privacy{display:flex;align-items:flex-start;gap:13px;background:linear-gradient(135deg,var(--card),rgba(48,209,88,.09))}.privacy>span{width:42px;height:42px;flex:none;border-radius:12px;color:var(--green);background:rgba(48,209,88,.12);display:grid;place-items:center}.privacy b{font-size:15px}.privacy p{margin:5px 0 0;color:var(--secondary);font-size:13px;line-height:1.4}.settings-row,.reset-row{width:100%;min-height:60px;padding:10px 13px;border:0;color:var(--text);background:transparent;display:flex;align-items:center;gap:11px;text-align:left}.settings-row+.settings-row{border-top:.5px solid var(--separator)}.settings-row>span:nth-child(2),.reset-row>span:nth-child(2){display:grid;gap:2px;flex:1}.settings-row small,.reset-row small{color:var(--secondary)}.settings-row>svg{color:var(--tertiary)}.icon{width:35px;height:35px;border-radius:9px;color:white;display:grid;place-items:center}.blue{background:var(--accent)}.green{background:var(--green)}.red{background:#ff453a}.budget{justify-content:space-between}.budget>span{flex:1}.budget label{color:var(--secondary)}.budget input{width:110px;border:0;outline:0;color:var(--text);background:transparent;text-align:right;font-weight:650}.reset-row{background:var(--card);border-radius:16px}.version{text-align:center;margin-top:28px;color:var(--tertiary);font-size:12px}
-</style>

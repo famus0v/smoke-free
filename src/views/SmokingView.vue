@@ -1,48 +1,67 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { ShieldCheck, HeartPulse, Wind, Check, RotateCcw } from 'lucide-vue-next'
-import { useAppStore } from '@/stores/app'
-import { haptic, notify } from '@/lib/telegram'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { AlertTriangle, Wind, CigaretteOff, Trophy, Flame, Share2, BadgeDollarSign, TrendingUp, CalendarDays, ReceiptText, Zap, Heart } from 'lucide-vue-next'
+import AppHeader from '@/components/AppHeader.vue'
+import TimeCounter from '@/components/TimeCounter.vue'
+import MetricCard from '@/components/MetricCard.vue'
+import SosBreathingModal from '@/components/SosBreathingModal.vue'
+import CravingSheet from '@/components/CravingSheet.vue'
+import HealthMilestoneItem from '@/components/HealthMilestoneItem.vue'
+import CravingHeatmap from '@/components/CravingHeatmap.vue'
+import ShareCardSheet from '@/components/ShareCardSheet.vue'
+import { useTrackerStore } from '@/stores/tracker'
+import { impact, notify } from '@/telegram'
+import type { CravingContext, UserProfile } from '@/types'
 
-const store = useAppStore()
-const sosSeconds = ref(180)
-const sosActive = ref(false)
-let interval: ReturnType<typeof setInterval> | undefined
-const money = (n: number) => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(n)
-const elapsed = computed(() => {
-  const ms = Math.max(0, Date.now() - new Date(store.state.smoking.quitDate).getTime())
-  const days = Math.floor(ms / 86400000); const hours = Math.floor(ms % 86400000 / 3600000)
-  return `${days} дн. ${hours} ч.`
-})
-const sosLabel = computed(() => `${String(Math.floor(sosSeconds.value / 60)).padStart(2,'0')}:${String(sosSeconds.value % 60).padStart(2,'0')}`)
-const toggleSos = () => {
-  haptic('medium')
-  if (sosActive.value) { clearInterval(interval); sosActive.value = false; sosSeconds.value = 180; return }
-  sosActive.value = true
-  interval = setInterval(() => { sosSeconds.value--; if (sosSeconds.value <= 0) { clearInterval(interval); sosActive.value = false; sosSeconds.value = 180; notify('success') } }, 1000)
-}
-const logCraving = (intensity: 1|2|3|4|5) => { store.addCraving(intensity, 'Быстрая запись'); haptic('light') }
-onBeforeUnmount(() => clearInterval(interval))
+const store = useTrackerStore()
+const router = useRouter()
+const section = ref<'home'|'health'|'finance'|'history'>('home')
+const sosOpen=ref(false), cravingOpen=ref(false), slipOpen=ref(false), shareOpen=ref(false)
+const dateLocal=ref(new Date().toISOString().slice(0,16)), cigarettes=ref(15), packPrice=ref(220), packCount=ref(20), slipCount=ref(1), slipReason=ref('')
+const currency=computed(()=>store.profile?.currency ?? '₽')
+const formatMoney=(value:number)=>`${Math.floor(value).toLocaleString('ru-RU')} ${currency.value}`
+const dailySaving=computed(()=>store.profile ? store.profile.cigarettesPerDay*store.profile.pricePerPack/store.profile.cigarettesInPack : 0)
+const saveProfile=()=>{const value:UserProfile={quitDate:new Date(dateLocal.value).toISOString(),cigarettesPerDay:Math.max(1,cigarettes.value),pricePerPack:Math.max(1,packPrice.value),cigarettesInPack:Math.max(1,packCount.value),currency:'₽'};store.setProfile(value);notify('success')}
+const saveCraving=(context:CravingContext,intensity:1|2|3|4|5,note:string)=>{store.logCraving(context,intensity,note);cravingOpen.value=false;notify('success')}
+const logSlip=()=>{if(!slipReason.value.trim())return;store.logSlip(Math.max(1,slipCount.value),slipReason.value);slipReason.value='';slipOpen.value=false;notify('warning')}
+const milestones=[
+  {time:20/60,title:'20 минут',description:'Пульс начинает возвращаться к обычному уровню.'},
+  {time:8,title:'8 часов',description:'Уровень угарного газа снижается, кислород восстанавливается.'},
+  {time:24,title:'24 часа',description:'Никотин в крови снижается до нуля.'},
+  {time:48,title:'48 часов',description:'Вкус и обоняние могут стать ярче.'},
+  {time:72,title:'72 часа',description:'Бронхи начинают расслабляться — дышать легче.'},
+  {time:24*14,title:'2 недели',description:'Кровообращение улучшается, нагрузка переносится увереннее.'},
+  {time:24*90,title:'3 месяца',description:'Функция лёгких и выносливость продолжают улучшаться.'},
+  {time:24*365,title:'1 год',description:'Риск для сердца существенно снижается.'},
+]
+const progress=(hours:number)=>Math.min(100,Math.floor(store.elapsedMs/3600000/hours*100))
+const events=computed(()=>[
+  ...store.data.cravings.map(item=>({id:item.id,type:'craving',time:item.timestamp,title:`Тяга ${item.intensity}/5`,note:item.note})),
+  ...store.data.slips.map(item=>({id:item.id,type:'slip',time:item.timestamp,title:`Эпизод · ${item.count}`,note:item.reason}))
+].sort((a,b)=>new Date(b.time).getTime()-new Date(a.time).getTime()))
 </script>
 
 <template>
-  <section class="screen">
-    <p class="eyebrow">Свобода от никотина</p><h1 class="screen-title">Вы держитесь</h1><p class="screen-subtitle">Каждая минута уже работает на вас.</p>
-    <div class="hero card">
-      <div class="halo"><ShieldCheck :size="32" /></div><span>Без сигарет</span><strong class="value">{{ elapsed }}</strong>
-      <div class="hero-stats"><div><b>{{ money(store.savedMoney) }} {{ store.state.finance.currency }}</b><small>сэкономлено</small></div><div><b>{{ store.cleanDays * store.state.smoking.cigarettesPerDay }}</b><small>не выкурено</small></div></div>
-    </div>
-    <button class="sos" :class="{ active:sosActive }" @click="toggleSos"><span>{{ sosActive ? sosLabel : 'SOS' }}</span><small>{{ sosActive ? 'Дышите медленно. Волна пройдёт.' : 'Пережить тягу за 3 минуты' }}</small></button>
-    <h2 class="section-title">Сила тяги сейчас</h2>
-    <div class="craving card inset"><div class="dots"><button v-for="n in 5" :key="n" :aria-label="`Тяга ${n} из 5`" @click="logCraving(n as 1|2|3|4|5)">{{ n }}</button></div><p>Нажмите, чтобы быстро отметить момент</p></div>
-    <h2 class="section-title">Восстановление</h2>
-    <div class="card milestones">
-      <div class="row"><span class="health green"><Wind :size="19" /></span><span><b>Кислород в норме</b><small>Первые 8–12 часов</small></span><Check class="green" :size="19" /></div>
-      <div class="row"><span class="health blue"><HeartPulse :size="19" /></span><span><b>Риск для сердца снижается</b><small>После первых суток</small></span><Check v-if="store.cleanDays >= 1" class="green" :size="19" /><RotateCcw v-else class="muted" :size="18" /></div>
-    </div>
+  <section v-if="!store.profile" class="tracker-onboarding">
+    <div class="onboarding-mark"><CigaretteOff :size="34"/></div><h1>Давай начнём</h1><p>Несколько деталей — и модуль будет считать твой прогресс.</p>
+    <section class="form-card"><label class="field"><span>Последняя сигарета</span><input v-model="dateLocal" type="datetime-local"/></label><label class="field"><span>Сколько сигарет в день?</span><input v-model.number="cigarettes" type="number" min="1"/></label><div class="field-row"><label class="field"><span>Цена пачки</span><input v-model.number="packPrice" type="number" min="1"/></label><label class="field"><span>Сигарет в пачке</span><input v-model.number="packCount" type="number" min="1"/></label></div><button class="primary" @click="saveProfile"><Heart :size="19"/> Начать новую жизнь</button></section>
   </section>
-</template>
+  <section v-else class="life-page smoke-module">
+    <AppHeader :title="section==='home'?'Сегодня без дыма':section==='health'?'Здоровье':section==='finance'?'Финансы':'История'" @settings="router.push('/settings')"/>
+    <div class="module-tabs"><button :class="{active:section==='home'}" @click="section='home';impact()">Сегодня</button><button :class="{active:section==='health'}" @click="section='health';impact()">Здоровье</button><button :class="{active:section==='finance'}" @click="section='finance';impact()">Деньги</button><button :class="{active:section==='history'}" @click="section='history';impact()">История</button></div>
 
-<style scoped>
-.hero{padding:22px 16px 0;text-align:center}.halo{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;display:grid;place-items:center;color:var(--green);background:rgba(48,209,88,.12);box-shadow:0 0 40px rgba(48,209,88,.11)}.hero>span{display:block;color:var(--secondary);font-size:13px}.hero>strong{display:block;margin:4px 0 20px;font-size:30px}.hero-stats{border-top:.5px solid var(--separator);display:grid;grid-template-columns:1fr 1fr}.hero-stats>div{padding:14px 8px;display:grid;gap:3px}.hero-stats>div+div{border-left:.5px solid var(--separator)}.hero-stats b{font-size:16px}.hero-stats small{color:var(--secondary);font-size:11px}.sos{width:100%;min-height:68px;margin-top:12px;border:0;border-radius:16px;color:white;background:linear-gradient(135deg,#ff453a,#ff2d55);box-shadow:0 8px 24px rgba(255,45,85,.16);display:grid;place-items:center;align-content:center}.sos span{font-size:21px;font-weight:800;letter-spacing:.03em}.sos small{margin-top:3px;opacity:.84}.sos.active{background:linear-gradient(135deg,#0a84ff,#5e5ce6)}.dots{display:flex;justify-content:space-between;gap:8px}.dots button{width:42px;height:42px;border:0;border-radius:50%;color:white;background:#3a3a3c;font-weight:700}.dots button:nth-child(1){background:#30d158}.dots button:nth-child(2){background:#a8c631}.dots button:nth-child(3){background:#ffd60a;color:#222}.dots button:nth-child(4){background:#ff9f0a}.dots button:nth-child(5){background:#ff453a}.craving p{margin:12px 0 0;text-align:center;color:var(--secondary);font-size:12px}.milestones .row>span:nth-child(2){display:grid;gap:2px;flex:1}.milestones small{color:var(--secondary)}.health{width:34px;height:34px;border-radius:9px;display:grid;place-items:center}.health.green{background:rgba(48,209,88,.12)}.health.blue{color:var(--accent);background:rgba(10,132,255,.12)}
-</style>
+    <div v-if="section==='home'" class="module-content home-page">
+      <section class="home-hero"><span class="home-hero-icon"><CigaretteOff :size="25"/></span><TimeCounter :elapsed="store.elapsedMs"/></section>
+      <div class="metrics home-grid"><MetricCard :value="formatMoney(store.moneySaved)" label="сэкономлено" tone="green" :icon="BadgeDollarSign"/><MetricCard :value="Math.floor(store.cigarettesNotSmoked).toLocaleString('ru-RU')" label="не выкурено" tone="blue" :icon="CigaretteOff"/><MetricCard :value="`${store.smokeFreeRatio}%`" label="чистых дней" tone="purple" :icon="Trophy"/></div>
+      <button class="sos-button" @click="sosOpen=true;impact('medium')"><span><b>Тянет курить?</b><small>Побудь с собой 3 минуты</small></span><Wind :size="29"/></button>
+      <div class="action-row"><button class="quick-action" @click="cravingOpen=true;impact()"><Flame :size="19"/>Записать тягу</button><button class="quick-action muted-action" @click="slipOpen=true;impact()"><AlertTriangle :size="18"/>Я оступился</button></div>
+      <button class="share-card-button" @click="shareOpen=true;impact('medium')"><Share2 :size="19"/><span><b>Поделиться достижением</b><small>Создать карточку для сторис</small></span></button>
+    </div>
+    <div v-else-if="section==='health'" class="module-content"><p class="page-intro">Тело восстанавливается поэтапно. Результаты индивидуальны.</p><div class="group-list"><HealthMilestoneItem v-for="item in milestones" :key="item.title" :title="item.title" :description="item.description" :progress="progress(item.time)" :complete="progress(item.time)>=100"/></div></div>
+    <div v-else-if="section==='finance'" class="module-content finance-page"><section class="finance-hero"><span class="finance-hero-icon"><BadgeDollarSign :size="25"/></span><p>УЖЕ СОХРАНЕНО</p><b>{{ formatMoney(store.moneySaved) }}</b><small>Деньги остаются у тебя — день за днём.</small></section><div class="finance-grid"><article><TrendingUp :size="20"/><span>В день</span><b>{{ formatMoney(dailySaving) }}</b></article><article><CalendarDays :size="20"/><span>За 30 дней</span><b>{{ formatMoney(dailySaving*30) }}</b></article><article><ReceiptText :size="20"/><span>Не выкурено</span><b>{{ Math.floor(store.cigarettesNotSmoked) }}</b></article></div></div>
+    <div v-else class="module-content history-page"><div class="history-intro"><p>Дневник помогает замечать ситуации, в которых нужна поддержка.</p><div class="history-summary"><span><b>{{ store.data.cravings.length }}</b> тяг</span><span><b>{{ store.data.slips.length }}</b> эпизодов</span></div></div><CravingHeatmap v-if="store.data.cravings.length" :logs="store.data.cravings"/><div v-if="events.length" class="group-list history-list"><article v-for="event in events" :key="`${event.type}-${event.id}`" class="history-row"><div class="history-icon"><Zap v-if="event.type==='craving'"/><AlertTriangle v-else/></div><div class="history-copy"><div class="history-line"><b>{{ event.title }}</b><time>{{ new Date(event.time).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}) }}</time></div><p>{{ new Date(event.time).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) }}</p><small v-if="event.note">{{ event.note }}</small></div></article></div><div v-else class="empty-state"><Wind :size="32"/><p>Записей пока нет.</p></div></div>
+  </section>
+  <SosBreathingModal v-if="sosOpen" @close="completed=>{sosOpen=false;if(completed)notify('success')}"/><Transition name="sheet-slide"><CravingSheet v-if="cravingOpen" @close="cravingOpen=false" @save="saveCraving"/></Transition><Transition name="sheet-slide"><ShareCardSheet v-if="shareOpen" :days="store.elapsedDays" :saved="store.moneySaved" :currency="currency" @close="shareOpen=false"/></Transition>
+  <Transition name="sheet-slide"><div v-if="slipOpen" class="sheet-backdrop" @click.self="slipOpen=false"><section class="sheet slip-sheet"><div class="sheet-handle"/><div class="sheet-title"><h2>Ты не начал с нуля</h2><button @click="slipOpen=false">×</button></div><p class="muted">Один эпизод не отменяет твой путь.</p><label>Сколько сигарет?</label><input v-model.number="slipCount" class="text-input" type="number" min="1"/><label>Что спровоцировало?</label><input v-model="slipReason" class="text-input" placeholder="Например, стресс или компания"/><button class="primary" @click="logSlip">Записать бережно</button></section></div></Transition>
+</template>

@@ -18,6 +18,8 @@ interface TelegramWebApp {
     selectionChanged(): void
   }
   shareToStory?(mediaUrl: string, params?: { text?: string }): void
+  requestFullscreen?(): void
+  disableVerticalSwipes?(): void
 }
 
 interface Window { Telegram?: { WebApp: TelegramWebApp } }

@@ -27,11 +27,12 @@ const open = () => { haptic('light'); emit('openSelector') }
 }
 .tg-pill {
   pointer-events: auto; height: 32px; max-width: 180px; padding: 0 13px 0 15px; border: 0; border-radius: 16px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 4px; color: var(--text); background: rgba(255,255,255,.12);
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px; color: var(--ink); background: rgba(255,255,255,.72);
   box-shadow: inset 0 0 0 .5px rgba(255,255,255,.15), 0 2px 8px rgba(0,0,0,.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   font: 600 14px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; transition: transform .12s ease, background .2s ease;
 }
 .tg-pill:active { transform: scale(.96); background: rgba(255,255,255,.18); }
 .tg-pill span { display: block; max-width: 140px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 @media (prefers-color-scheme: light) { .tg-header { background: linear-gradient(180deg, rgba(239,239,244,.9), rgba(239,239,244,0)); } .tg-pill { background: rgba(255,255,255,.72); box-shadow: inset 0 0 0 .5px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.08); } }
+@media (prefers-color-scheme: dark) { .tg-pill { color:#f9fafb; background:rgba(28,28,33,.84); } }
 </style>

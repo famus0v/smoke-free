@@ -5,6 +5,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: () => import('@/views/HubView.vue') },
+    { path: '/modules', name: 'modules', component: () => import('@/views/ModulesView.vue') },
     { path: '/smoking', name: 'smoking', component: () => import('@/views/SmokingView.vue') },
     { path: '/fitness', name: 'fitness', component: () => import('@/views/FitnessView.vue') },
     { path: '/finance', name: 'finance', component: () => import('@/views/FinanceView.vue') },
@@ -17,7 +18,8 @@ const router = createRouter({
 
 router.afterEach((to) => {
   if (!tg?.BackButton) return
-  to.name === 'home' ? tg.BackButton.hide() : tg.BackButton.show()
+  const rootTabs = ['home', 'modules', 'settings']
+  rootTabs.includes(String(to.name)) ? tg.BackButton.hide() : tg.BackButton.show()
 })
 
 const handleBack = () => { haptic('light'); router.back() }
