@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
-import type { AppStorageState, DashboardWidgetId, ExpenseCategory, ModuleId } from '@/types'
+import type { AppStorageState, DashboardWidgetId, DebtDirection, ExpenseCategory, ModuleId, SubscriptionCadence } from '@/types'
 
 const isoNow = () => new Date().toISOString()
 const dateKey = (date = new Date()) => date.toISOString().slice(0, 10)
@@ -22,12 +22,12 @@ export const createDefaultState = (): AppStorageState => ({
     wishlist: [],
     debts: [],
     subscriptions: [
-      { id: uid(), title: 'VPN', amount: 0, billingDay: 1, active: true },
-      { id: uid(), title: 'Хостинги', amount: 0, billingDay: 1, active: true },
-      { id: uid(), title: 'Нейросети', amount: 0, billingDay: 1, active: true },
-      { id: uid(), title: 'Telegram Premium', amount: 0, billingDay: 1, active: true },
-      { id: uid(), title: 'Музыка', amount: 0, billingDay: 1, active: true },
-      { id: uid(), title: 'Зал', amount: 0, billingDay: 1, active: true },
+      { id: uid(), title: 'VPN', amount: 0, billingDay: 1, billingMonth: 1, cadence: 'monthly', active: true },
+      { id: uid(), title: 'Хостинги', amount: 0, billingDay: 1, billingMonth: 1, cadence: 'monthly', active: true },
+      { id: uid(), title: 'Нейросети', amount: 0, billingDay: 1, billingMonth: 1, cadence: 'monthly', active: true },
+      { id: uid(), title: 'Telegram Premium', amount: 0, billingDay: 1, billingMonth: 1, cadence: 'monthly', active: true },
+      { id: uid(), title: 'Музыка', amount: 0, billingDay: 1, billingMonth: 1, cadence: 'monthly', active: true },
+      { id: uid(), title: 'Зал', amount: 0, billingDay: 1, billingMonth: 1, cadence: 'monthly', active: true },
     ],
   },
   work: { dailyFocusTasks: [], scratchpad: '' },
@@ -51,6 +51,8 @@ export const useAppStore = defineStore('app', () => {
   if (!Array.isArray(state.value.dashboardWidgets) || state.value.dashboardWidgets.length === 0) state.value.dashboardWidgets = ['smoking', 'fitness', 'finance', 'work']
   if (!Array.isArray(state.value.finance.debts)) state.value.finance.debts = []
   if (!Array.isArray(state.value.finance.subscriptions)) state.value.finance.subscriptions = createDefaultState().finance.subscriptions
+  state.value.finance.debts = state.value.finance.debts.map((debt) => ({ ...debt, direction: debt.direction ?? 'i_owe' }))
+  state.value.finance.subscriptions = state.value.finance.subscriptions.map((subscription) => ({ ...subscription, cadence: subscription.cadence ?? 'monthly' }))
   ensureTodayLimit()
 
   const cleanDays = computed(() => Math.max(0, Math.floor((Date.now() - new Date(state.value.smoking.quitDate).getTime()) / 86400000)))
@@ -75,15 +77,15 @@ export const useAppStore = defineStore('app', () => {
     const order: DashboardWidgetId[] = ['smoking', 'fitness', 'finance', 'work']
     state.value.dashboardWidgets = order.filter((item) => [...widgets, widget].includes(item))
   }
-  const addDebt = (title: string, amount: number, dueDate?: string) => {
+  const addDebt = (title: string, amount: number, direction: DebtDirection, dueDate?: string) => {
     if (!title.trim() || amount <= 0) return false
-    state.value.finance.debts.unshift({ id: uid(), title: title.trim(), amount, dueDate })
+    state.value.finance.debts.unshift({ id: uid(), title: title.trim(), amount, direction, dueDate })
     return true
   }
   const removeDebt = (id: string) => { state.value.finance.debts = state.value.finance.debts.filter((debt) => debt.id !== id) }
-  const addSubscription = (title: string, amount: number, billingDay: number) => {
+  const addSubscription = (title: string, amount: number, billingDay: number, cadence: SubscriptionCadence, billingMonth?: number) => {
     if (!title.trim() || amount < 0) return false
-    state.value.finance.subscriptions.unshift({ id: uid(), title: title.trim(), amount, billingDay: Math.min(31, Math.max(1, Math.round(billingDay))), active: true })
+    state.value.finance.subscriptions.unshift({ id: uid(), title: title.trim(), amount, billingDay: Math.min(31, Math.max(1, Math.round(billingDay))), billingMonth: billingMonth ? Math.min(12, Math.max(1, Math.round(billingMonth))) : undefined, cadence, active: true })
     return true
   }
   const removeSubscription = (id: string) => { state.value.finance.subscriptions = state.value.finance.subscriptions.filter((subscription) => subscription.id !== id) }
@@ -98,6 +100,8 @@ export const useAppStore = defineStore('app', () => {
     state.value = { ...createDefaultState(), ...(value as AppStorageState) }
     if (!Array.isArray(state.value.finance.debts)) state.value.finance.debts = []
     if (!Array.isArray(state.value.finance.subscriptions)) state.value.finance.subscriptions = createDefaultState().finance.subscriptions
+  state.value.finance.debts = state.value.finance.debts.map((debt) => ({ ...debt, direction: debt.direction ?? 'i_owe' }))
+  state.value.finance.subscriptions = state.value.finance.subscriptions.map((subscription) => ({ ...subscription, cadence: subscription.cadence ?? 'monthly' }))
     if (!Array.isArray(state.value.dashboardWidgets) || state.value.dashboardWidgets.length === 0) state.value.dashboardWidgets = ['smoking', 'fitness', 'finance', 'work']
     ensureTodayLimit()
   }

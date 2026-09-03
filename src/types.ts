@@ -1,6 +1,8 @@
 export type ModuleId = 'hub' | 'smoking' | 'fitness' | 'finance' | 'work'
 export type DashboardWidgetId = Exclude<ModuleId, 'hub'>
 export type ExpenseCategory = 'food' | 'sport' | 'fixed' | 'fun'
+export type DebtDirection = 'owed_to_me' | 'i_owe'
+export type SubscriptionCadence = 'monthly' | 'yearly'
 
 // Legacy smoke-free tracker compatibility.
 export interface CravingContext {
@@ -43,8 +45,8 @@ export interface AppStorageState {
     dailyLimit: number
     expenses: Array<{ id: string; date: string; amount: number; category: ExpenseCategory; note?: string }>
     wishlist: Array<{ id: string; title: string; cost: number; unlocked: boolean }>
-    debts: Array<{ id: string; title: string; amount: number; dueDate?: string }>
-    subscriptions: Array<{ id: string; title: string; amount: number; billingDay: number; active: boolean }>
+    debts: Array<{ id: string; title: string; amount: number; dueDate?: string; direction: DebtDirection }>
+    subscriptions: Array<{ id: string; title: string; amount: number; billingDay: number; billingMonth?: number; cadence: SubscriptionCadence; active: boolean }>
   }
   work: {
     dailyFocusTasks: Array<{ id: string; title: string; completed: boolean }>
