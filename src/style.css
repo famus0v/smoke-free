@@ -109,3 +109,6 @@ html, body, #app { width: 100%; min-height: 100%; } body { overflow: hidden; pos
 @media (prefers-color-scheme: dark) { .history-row.craving .history-icon { color: #c084fc; background: rgba(168,85,247,.18); } }
 /* Telegram only: restore the fullscreen safe area without affecting PWA */
 :root[data-platform="telegram"] .app-shell, :root[data-platform="telegram"] .onboarding { padding-top: max(72px, calc(env(safe-area-inset-top) + 36px), calc(var(--tg-viewport-safe-area-inset-top, 0px) + 36px)); }
+/* Story action is separate from ordinary image sharing */
+.share-actions { grid-template-columns: 1fr 1fr; }.story-button { display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 15px; color: #fff; background: #34a853; font-weight: 700; box-shadow: 0 8px 18px rgba(52,168,83,.22); }
+@media (prefers-color-scheme: dark) { .story-button { background: #30d158; color: #0b2512; } }
