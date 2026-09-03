@@ -4,7 +4,7 @@ const number = (url, key, limit) => Math.max(0, Math.min(limit, Number(url.searc
 const escapeXml = (text) => String(text).replace(/[&<>"']/g, (symbol) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[symbol]))
 
 export default async function handler(request) {
-  const url = new URL(request.url)
+  const url = new URL(request.url, `https://${request.headers.host || 'anti-smoke-nine.vercel.app'}`)
   const days = number(url, 'days', 99_999)
   const saved = number(url, 'saved', 99_999_999).toLocaleString('ru-RU')
   const currency = (url.searchParams.get('currency') || '₽').slice(0, 4)
