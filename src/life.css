@@ -56,3 +56,7 @@ html,body,#app{height:100%;min-height:0}.app-shell{height:100dvh!important;min-h
 /* Shared form-control system. Component-specific sizes may only refine layout. */
 input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),textarea,select,.app-input{min-height:46px;border:1px solid transparent;border-radius:12px;padding:10px 12px;color:var(--text);background:var(--pressed);font:inherit;font-size:16px;line-height:1.25;outline:0;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}textarea{width:100%;min-height:128px;resize:vertical}input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent);background:color-mix(in srgb,var(--pressed) 82%,var(--card))}input::placeholder,textarea::placeholder{color:var(--secondary);opacity:1}.workout-row input,.workout-title input,.focus-add input{min-height:0;border:0;box-shadow:none}.workout-row input:focus,.workout-title input:focus,.focus-add input:focus{box-shadow:none}.sheet .text-input,.form-card input{width:100%}
 @media(prefers-color-scheme:light){input:focus,textarea:focus,select:focus{background:#fff}}
+
+/* Hero shadows stay inside their own visual layer. */
+.module-hero,.home-hero{box-shadow:0 4px 10px rgba(0,122,255,.15)}.fitness-hero{box-shadow:0 4px 10px rgba(255,149,0,.15)}.work-hero{box-shadow:0 4px 10px rgba(168,85,247,.15)}
+.finance-hero{box-shadow:0 4px 10px rgba(52,199,89,.15)}

@@ -1,4 +1,5 @@
 export type ModuleId = 'hub' | 'smoking' | 'fitness' | 'finance' | 'work'
+export type DashboardWidgetId = Exclude<ModuleId, 'hub'>
 export type ExpenseCategory = 'food' | 'sport' | 'fixed' | 'fun'
 
 // Legacy smoke-free tracker compatibility.
@@ -16,6 +17,7 @@ export interface TrackerData { profile: UserProfile | null; cravings: CravingLog
 export interface AppStorageState {
   version: number
   activeModule: ModuleId
+  dashboardWidgets: DashboardWidgetId[]
   smoking: {
     quitDate: string
     cigarettesPerDay: number
@@ -37,6 +39,8 @@ export interface AppStorageState {
   finance: {
     monthlyBudget: number
     currency: string
+    dailyLimitDate: string
+    dailyLimit: number
     expenses: Array<{ id: string; date: string; amount: number; category: ExpenseCategory; note?: string }>
     wishlist: Array<{ id: string; title: string; cost: number; unlocked: boolean }>
   }
