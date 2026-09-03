@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { AlertTriangle, Wind, CigaretteOff, Trophy, Flame, Share2, BadgeDollarSign, TrendingUp, CalendarDays, ReceiptText, Zap, Heart } from 'lucide-vue-next'
-import AppHeader from '@/components/AppHeader.vue'
+import { AlertTriangle, Wind, CigaretteOff, Trophy, Flame, Share2, BadgeDollarSign, TrendingUp, CalendarDays, ReceiptText, Zap } from 'lucide-vue-next'
 import TimeCounter from '@/components/TimeCounter.vue'
 import MetricCard from '@/components/MetricCard.vue'
 import SosBreathingModal from '@/components/SosBreathingModal.vue'
@@ -12,17 +10,15 @@ import CravingHeatmap from '@/components/CravingHeatmap.vue'
 import ShareCardSheet from '@/components/ShareCardSheet.vue'
 import { useTrackerStore } from '@/stores/tracker'
 import { impact, notify } from '@/telegram'
-import type { CravingContext, UserProfile } from '@/types'
+import type { CravingContext } from '@/types'
 
 const store = useTrackerStore()
-const router = useRouter()
 const section = ref<'home'|'health'|'finance'|'history'>('home')
 const sosOpen=ref(false), cravingOpen=ref(false), slipOpen=ref(false), shareOpen=ref(false)
-const dateLocal=ref(new Date().toISOString().slice(0,16)), cigarettes=ref(15), packPrice=ref(220), packCount=ref(20), slipCount=ref(1), slipReason=ref('')
+const slipCount=ref(1), slipReason=ref('')
 const currency=computed(()=>store.profile?.currency ?? '₽')
 const formatMoney=(value:number)=>`${Math.floor(value).toLocaleString('ru-RU')} ${currency.value}`
-const dailySaving=computed(()=>store.profile ? store.profile.cigarettesPerDay*store.profile.pricePerPack/store.profile.cigarettesInPack : 0)
-const saveProfile=()=>{const value:UserProfile={quitDate:new Date(dateLocal.value).toISOString(),cigarettesPerDay:Math.max(1,cigarettes.value),pricePerPack:Math.max(1,packPrice.value),cigarettesInPack:Math.max(1,packCount.value),currency:'₽'};store.setProfile(value);notify('success')}
+const dailySaving=computed(()=>store.profile ? store.profile.monthlySpend/30 : 0)
 const saveCraving=(context:CravingContext,intensity:1|2|3|4|5,note:string)=>{store.logCraving(context,intensity,note);cravingOpen.value=false;notify('success')}
 const logSlip=()=>{if(!slipReason.value.trim())return;store.logSlip(Math.max(1,slipCount.value),slipReason.value);slipReason.value='';slipOpen.value=false;notify('warning')}
 const milestones=[
@@ -43,12 +39,9 @@ const events=computed(()=>[
 </script>
 
 <template>
-  <section v-if="!store.profile" class="tracker-onboarding">
-    <div class="onboarding-mark"><CigaretteOff :size="34"/></div><h1>Давай начнём</h1><p>Несколько деталей — и модуль будет считать твой прогресс.</p>
-    <section class="form-card"><label class="field"><span>Последняя сигарета</span><input v-model="dateLocal" type="datetime-local"/></label><label class="field"><span>Сколько сигарет в день?</span><input v-model.number="cigarettes" type="number" min="1"/></label><div class="field-row"><label class="field"><span>Цена пачки</span><input v-model.number="packPrice" type="number" min="1"/></label><label class="field"><span>Сигарет в пачке</span><input v-model.number="packCount" type="number" min="1"/></label></div><button class="primary" @click="saveProfile"><Heart :size="19"/> Начать новую жизнь</button></section>
-  </section>
-  <section v-else class="life-page smoke-module">
-    <AppHeader :title="section==='home'?'Сегодня без дыма':section==='health'?'Здоровье':section==='finance'?'Финансы':'История'" @settings="router.push('/settings')"/>
+  <section class="life-page smoke-module">
+    <p class="eyebrow">БЕЗ ДЫМА</p>
+    <h1 class="screen-title">{{ section==='home'?'Сегодня без дыма':section==='health'?'Здоровье':section==='finance'?'Финансы':'История' }}</h1>
     <div class="module-tabs"><button :class="{active:section==='home'}" @click="section='home';impact()">Сегодня</button><button :class="{active:section==='health'}" @click="section='health';impact()">Здоровье</button><button :class="{active:section==='finance'}" @click="section='finance';impact()">Деньги</button><button :class="{active:section==='history'}" @click="section='history';impact()">История</button></div>
 
     <div v-if="section==='home'" class="module-content home-page">

@@ -47,3 +47,6 @@ body { touch-action:pan-x pan-y; }
 @media (prefers-color-scheme:dark) { .dashboard-widget,.module-list-card,.rest-panel,.focus-timer { box-shadow:none; }.module-tabs { background:rgba(0,0,0,.35); }.module-tabs button.active { background:#2d2d35; }.fitness-hero { background:linear-gradient(135deg,#c76200,#f59e0b); }.sheet-options button.active { color:#c084fc; background:rgba(168,85,247,.15); outline-color:#a855f7; } }
 @media (max-width:360px) { .dashboard-widgets { gap:8px; }.dashboard-widget { min-height:128px; padding:12px; }.module-tabs button { font-size:11px; } }
 @media (min-width:560px) { body { display:block; background:var(--bg,#000); }.app-shell { width:auto; height:auto; padding:0; border-radius:0; box-shadow:none; }.tabbar { width:100%; border-radius:0; } }
+:root[data-platform="telegram"] .app-shell { padding-top:0 !important; }
+.smoke-module .screen-title { margin:0 0 13px; }.smoke-module .module-tabs { margin-top:0; background:var(--card); }.smoke-module .module-tabs button.active { background:var(--pressed); }.smoke-module .home-hero,.smoke-module .finance-hero { border-radius:16px; }.smoke-module .home-grid .metric-card,.smoke-module .group-list,.smoke-module .sos-button,.smoke-module .share-card-button { border-radius:16px; }
+@media(prefers-color-scheme:light){.smoke-module .module-tabs button.active{background:#fff}}

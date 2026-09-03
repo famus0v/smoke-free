@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router'
 import { CigaretteOff, Dumbbell, WalletCards, Focus, ChevronRight, Settings } from 'lucide-vue-next'
 import { useAppStore } from '@/stores/app'
 import { haptic } from '@/lib/telegram'
+import { useTrackerStore } from '@/stores/tracker'
 
 const router = useRouter()
 const store = useAppStore()
+const tracker = useTrackerStore()
 const greeting = computed(() => { const h = new Date().getHours(); return h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер' })
 const taskDone = computed(() => store.state.work.dailyFocusTasks.filter((t) => t.completed).length)
 const latestWorkout = computed(() => store.state.fitness.workouts[0])
@@ -22,7 +24,7 @@ const go = (path: string) => { haptic('light'); router.push(path) }
     <div class="dashboard-grid">
       <button class="metric-card smoke" @click="go('/smoking')">
         <span class="metric-icon"><CigaretteOff :size="20" /></span><span class="metric-kicker">Свобода</span>
-        <strong>{{ store.cleanDays }} <small>дн.</small></strong><span class="metric-note green">+{{ money(store.savedMoney) }} {{ store.state.finance.currency }}</span>
+        <strong>{{ Math.floor(tracker.elapsedDays) }} <small>дн.</small></strong><span class="metric-note green">+{{ money(tracker.moneySaved) }} {{ tracker.profile?.currency ?? '₽' }}</span>
       </button>
       <button class="metric-card fitness" @click="go('/fitness')">
         <span class="metric-icon"><Dumbbell :size="20" /></span><span class="metric-kicker">Тренировка</span>
