@@ -19,9 +19,15 @@ export const createDefaultState = (): AppStorageState => ({
     dailyLimitDate: '',
     dailyLimit: 0,
     expenses: [],
-    wishlist: [
-      { id: uid(), title: 'Новые кроссовки', cost: 12000, unlocked: false },
-      { id: uid(), title: 'Массаж', cost: 4500, unlocked: true },
+    wishlist: [],
+    debts: [],
+    subscriptions: [
+      { id: uid(), title: 'VPN', amount: 0, billingDay: 1, active: true },
+      { id: uid(), title: 'Хостинги', amount: 0, billingDay: 1, active: true },
+      { id: uid(), title: 'Нейросети', amount: 0, billingDay: 1, active: true },
+      { id: uid(), title: 'Telegram Premium', amount: 0, billingDay: 1, active: true },
+      { id: uid(), title: 'Музыка', amount: 0, billingDay: 1, active: true },
+      { id: uid(), title: 'Зал', amount: 0, billingDay: 1, active: true },
     ],
   },
   work: { dailyFocusTasks: [], scratchpad: '' },
@@ -38,47 +44,48 @@ export const useAppStore = defineStore('app', () => {
     const finance = state.value.finance
     if (finance.dailyLimitDate === today && Number.isFinite(finance.dailyLimit)) return
     const month = today.slice(0, 7)
-    const spentBeforeToday = finance.expenses
-      .filter((expense) => expense.date.startsWith(month) && expense.date.slice(0, 10) < today)
-      .reduce((sum, expense) => sum + expense.amount, 0)
+    const spentBeforeToday = finance.expenses.filter((expense) => expense.date.startsWith(month) && expense.date.slice(0, 10) < today).reduce((sum, expense) => sum + expense.amount, 0)
     finance.dailyLimit = Math.max(0, (finance.monthlyBudget - spentBeforeToday) / daysRemainingThisMonth())
     finance.dailyLimitDate = today
   }
-  if (!Array.isArray(state.value.dashboardWidgets) || state.value.dashboardWidgets.length === 0) {
-    state.value.dashboardWidgets = ['smoking', 'fitness', 'finance', 'work']
-  }
+  if (!Array.isArray(state.value.dashboardWidgets) || state.value.dashboardWidgets.length === 0) state.value.dashboardWidgets = ['smoking', 'fitness', 'finance', 'work']
+  if (!Array.isArray(state.value.finance.debts)) state.value.finance.debts = []
+  if (!Array.isArray(state.value.finance.subscriptions)) state.value.finance.subscriptions = createDefaultState().finance.subscriptions
   ensureTodayLimit()
+
   const cleanDays = computed(() => Math.max(0, Math.floor((Date.now() - new Date(state.value.smoking.quitDate).getTime()) / 86400000)))
   const savedMoney = computed(() => Math.max(0, cleanDays.value * state.value.smoking.cigarettesPerDay * state.value.smoking.pricePerPack / state.value.smoking.cigarettesInPack))
-  const monthExpenses = computed(() => {
-    const key = new Date().toISOString().slice(0, 7)
-    return state.value.finance.expenses.filter((e) => e.date.startsWith(key)).reduce((sum, e) => sum + e.amount, 0)
-  })
+  const monthExpenses = computed(() => state.value.finance.expenses.filter((expense) => expense.date.startsWith(dateKey().slice(0, 7))).reduce((sum, expense) => sum + expense.amount, 0))
   const todayLimit = computed(() => { ensureTodayLimit(); return state.value.finance.dailyLimit })
   const futureDailyLimit = computed(() => {
     ensureTodayLimit()
     const remainingDays = daysRemainingThisMonth() - 1
-    if (remainingDays <= 0) return 0
-    return Math.max(0, (state.value.finance.monthlyBudget - monthExpenses.value) / remainingDays)
+    return remainingDays > 0 ? Math.max(0, (state.value.finance.monthlyBudget - monthExpenses.value) / remainingDays) : 0
   })
   const safeToSpend = todayLimit
 
   const setActiveModule = (module: ModuleId) => { state.value.activeModule = module }
   const addCraving = (intensity: 1 | 2 | 3 | 4 | 5, trigger: string) => state.value.smoking.cravings.unshift({ id: uid(), timestamp: isoNow(), intensity, trigger })
   const addSlip = (count: number, reason: string) => state.value.smoking.slips.unshift({ id: uid(), timestamp: isoNow(), count, reason })
-  const addExpense = (amount: number, category: ExpenseCategory, note?: string) => {
-    ensureTodayLimit()
-    state.value.finance.expenses.unshift({ id: uid(), date: isoNow(), amount, category, note })
-  }
+  const addExpense = (amount: number, category: ExpenseCategory, note?: string) => { ensureTodayLimit(); state.value.finance.expenses.unshift({ id: uid(), date: isoNow(), amount, category, note }) }
   const toggleDashboardWidget = (widget: DashboardWidgetId) => {
     const widgets = state.value.dashboardWidgets
-    if (widgets.includes(widget)) {
-      if (widgets.length > 1) state.value.dashboardWidgets = widgets.filter((item) => item !== widget)
-      return
-    }
+    if (widgets.includes(widget)) { if (widgets.length > 1) state.value.dashboardWidgets = widgets.filter((item) => item !== widget); return }
     const order: DashboardWidgetId[] = ['smoking', 'fitness', 'finance', 'work']
     state.value.dashboardWidgets = order.filter((item) => [...widgets, widget].includes(item))
   }
+  const addDebt = (title: string, amount: number, dueDate?: string) => {
+    if (!title.trim() || amount <= 0) return false
+    state.value.finance.debts.unshift({ id: uid(), title: title.trim(), amount, dueDate })
+    return true
+  }
+  const removeDebt = (id: string) => { state.value.finance.debts = state.value.finance.debts.filter((debt) => debt.id !== id) }
+  const addSubscription = (title: string, amount: number, billingDay: number) => {
+    if (!title.trim() || amount < 0) return false
+    state.value.finance.subscriptions.unshift({ id: uid(), title: title.trim(), amount, billingDay: Math.min(31, Math.max(1, Math.round(billingDay))), active: true })
+    return true
+  }
+  const removeSubscription = (id: string) => { state.value.finance.subscriptions = state.value.finance.subscriptions.filter((subscription) => subscription.id !== id) }
   const addTask = (title: string) => {
     if (state.value.work.dailyFocusTasks.length >= 3 || !title.trim()) return false
     state.value.work.dailyFocusTasks.push({ id: uid(), title: title.trim(), completed: false })
@@ -88,9 +95,11 @@ export const useAppStore = defineStore('app', () => {
   const importState = (value: unknown) => {
     if (!value || typeof value !== 'object' || !('version' in value)) throw new Error('Неверный формат файла')
     state.value = { ...createDefaultState(), ...(value as AppStorageState) }
+    if (!Array.isArray(state.value.finance.debts)) state.value.finance.debts = []
+    if (!Array.isArray(state.value.finance.subscriptions)) state.value.finance.subscriptions = createDefaultState().finance.subscriptions
     if (!Array.isArray(state.value.dashboardWidgets) || state.value.dashboardWidgets.length === 0) state.value.dashboardWidgets = ['smoking', 'fitness', 'finance', 'work']
     ensureTodayLimit()
   }
 
-  return { state, cleanDays, savedMoney, monthExpenses, safeToSpend, todayLimit, futureDailyLimit, setActiveModule, addCraving, addSlip, addExpense, toggleDashboardWidget, addTask, reset, importState }
+  return { state, cleanDays, savedMoney, monthExpenses, safeToSpend, todayLimit, futureDailyLimit, setActiveModule, addCraving, addSlip, addExpense, toggleDashboardWidget, addDebt, removeDebt, addSubscription, removeSubscription, addTask, reset, importState }
 })
