@@ -3,7 +3,7 @@ import sharp from 'sharp'
 const number = (url, key, limit) => Math.max(0, Math.min(limit, Number(url.searchParams.get(key)) || 0))
 const escapeXml = (text) => String(text).replace(/[&<>"']/g, (symbol) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[symbol]))
 
-export default async function handler(request) {
+export default async function handler(request, response) {
   const url = new URL(request.url, `https://${request.headers.host || 'anti-smoke-nine.vercel.app'}`)
   const days = number(url, 'days', 99_999)
   const saved = number(url, 'saved', 99_999_999).toLocaleString('ru-RU')
@@ -25,5 +25,7 @@ export default async function handler(request) {
     <text x="78" y="1775" fill="#fff" fill-opacity=".76" font-family="Arial, sans-serif" font-size="32">smokefree</text>
   </svg>`
   const image = await sharp(Buffer.from(svg)).png().toBuffer()
-  return new Response(image, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300' } })
+  response.setHeader('Content-Type', 'image/png')
+  response.setHeader('Cache-Control', 'public, max-age=300')
+  response.status(200).send(image)
 }
